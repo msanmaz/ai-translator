@@ -1,3 +1,4 @@
+// src/services/authService.js
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma.js';
@@ -22,6 +23,11 @@ export const generateToken = (userId) => {
   );
 };
 
+/**
+ * Create a new user
+ * @param {Object} userData - User data
+ * @returns {Promise<Object>} Created user
+ */
 export const createUser = async (userData) => {
   try {
     // Hash the password
@@ -54,6 +60,44 @@ export const createUser = async (userData) => {
   }
 };
 
+/**
+ * Track login activity for a user
+ * Note: This is a silent operation that won't fail the login if it errors
+ * @param {string} userId - User ID
+ */
+export const trackLoginActivity = async (userId) => {
+  try {
+    // Check if your schema allows storing this data
+    // If schema doesn't have lastLoginAt or loginCount fields yet, this will silently skip
+    // These fields will be added to Intercom through other means
+    
+    // For now, we'll just store login activity in a log
+    logger.info(`User login: ${userId} at ${new Date().toISOString()}`);
+    
+    // If you decide to extend your schema later, you can uncomment this:
+    /*
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        lastLoginAt: new Date(),
+        loginCount: {
+          increment: 1
+        }
+      }
+    });
+    */
+  } catch (error) {
+    // Don't throw errors - just log them
+    logger.error(`Error tracking login activity: ${error.message}`);
+  }
+};
+
+/**
+ * Authenticate a user
+ * @param {string} email - User email
+ * @param {string} password - User password
+ * @returns {Promise<Object>} Authentication result with user and token
+ */
 export const authenticateUser = async (email, password) => {
   try {
     // Find user by email
@@ -65,6 +109,11 @@ export const authenticateUser = async (email, password) => {
     if (!user || !(await comparePasswords(password, user.password))) {
       throw new Error('Invalid email or password');
     }
+
+    // Track login activity (silent operation)
+    trackLoginActivity(user.id).catch(err => {
+      logger.error(`Silent error tracking login: ${err.message}`);
+    });
 
     // Generate JWT token
     const token = generateToken(user.id);

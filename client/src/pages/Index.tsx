@@ -43,6 +43,8 @@ const AppContent: React.FC = () => {
         <Header
         />
       )}
+
+
       
       <main className="flex-1 py-8 px-4 sm:px-6 flex items-center justify-center">
         {/* Auth form - only visible when not authenticated */}

@@ -1,4 +1,5 @@
 import { createUser, authenticateUser, generateToken } from '../services/authService.js';
+import { prepareIntercomData } from '../services/intercomService.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -18,10 +19,14 @@ export const signup = async (req, res) => {
     const user = await createUser({ name, email, password });
     const token = generateToken(user.id);
     
+    // Prepare Intercom data
+    const intercom = await prepareIntercomData(user);
+    
     res.status(201).json({
       success: true,
       token,
-      user
+      user,
+      intercom // Include Intercom data
     });
   } catch (error) {
     logger.error(`Signup error: ${error.message}`);
@@ -57,10 +62,14 @@ export const login = async (req, res) => {
     
     const { user, token } = await authenticateUser(email, password);
     
+    // Prepare Intercom data
+    const intercom = await prepareIntercomData(user);
+    
     res.status(200).json({
       success: true,
       token,
-      user
+      user,
+      intercom // Include Intercom data
     });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
@@ -86,10 +95,13 @@ export const login = async (req, res) => {
  */
 export const getCurrentUser = async (req, res) => {
   try {
-    // The user is already attached to req by auth middleware
+    // Prepare Intercom data
+    const intercom = await prepareIntercomData(req.user);
+    
     res.status(200).json({
       success: true,
-      user: req.user
+      user: req.user,
+      intercom // Include Intercom data
     });
   } catch (error) {
     logger.error(`Get current user error: ${error.message}`);
@@ -100,6 +112,9 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
+/**
+ * Refresh token controller
+ */
 export const refreshToken = async (req, res) => {
   try {
     // The user is already available from the authenticateJWT middleware
@@ -108,10 +123,14 @@ export const refreshToken = async (req, res) => {
     // Generate a fresh token
     const token = generateToken(userId);
     
+    // Prepare Intercom data
+    const intercom = await prepareIntercomData(req.user);
+    
     res.status(200).json({
       success: true,
       token,
-      user: req.user
+      user: req.user,
+      intercom // Include Intercom data
     });
   } catch (error) {
     logger.error(`Refresh token error: ${error.message}`);

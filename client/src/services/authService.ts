@@ -1,24 +1,17 @@
 // src/services/authService.ts
-
 import { apiRequest } from '@/utils/apiClient';
 import { jwtDecode } from 'jwt-decode';
 
 // Types
 export type LoginCredentials = {
-    email: string;
-    password: string;
-  };
-  
-  export type SignupCredentials = {
-    name: string;
-    email: string;
-    password: string;
-  };
+  email: string;
+  password: string;
+};
 
-export type AuthResponse = {
-  success: boolean;
-  token: string;
-  user: User;
+export type SignupCredentials = {
+  name: string;
+  email: string;
+  password: string;
 };
 
 export interface UserPreferences {
@@ -39,6 +32,39 @@ export type User = {
   preferences?: UserPreferences;
   createdAt?: string;
   updatedAt?: string;
+};
+
+// Intercom custom attributes
+export interface IntercomCustomAttributes {
+  default_source_language?: string;
+  default_target_language?: string;
+  translation_tone?: string;
+  total_translations?: number;
+  total_characters_translated?: number;
+  most_used_source_language?: string;
+  most_used_target_language?: string;
+  favorite_translations_count?: number;
+  days_since_signup?: number;
+  last_translation_at?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+// Intercom data structure
+export interface IntercomData {
+  userId: string;
+  email: string;
+  name: string;
+  createdAt: number;
+  appId: string;
+  userHash?: string;
+  custom_attributes?: IntercomCustomAttributes;
+}
+
+export type AuthResponse = {
+  success: boolean;
+  token: string;
+  user: User;
+  intercom?: IntercomData; // Now included in auth responses
 };
 
 /**
@@ -66,11 +92,12 @@ const authService = {
       data: credentials,
     }, signal);
   },
+  
   /**
    * Get the current logged in user
    */
-  getCurrentUser: async (): Promise<{ success: boolean; user: User }> => {
-    return apiRequest<{ success: boolean; user: User }>({
+  getCurrentUser: async (): Promise<{ success: boolean; user: User; intercom?: IntercomData }> => {
+    return apiRequest<{ success: boolean; user: User; intercom?: IntercomData }>({
       method: 'GET',
       url: '/auth/me',
     });
@@ -123,6 +150,35 @@ const authService = {
    */
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem('auth_token');
+  },
+  
+  /**
+   * Save Intercom data to localStorage for easy access
+   */
+  setIntercomData: (data: IntercomData): void => {
+    localStorage.setItem('intercom_data', JSON.stringify(data));
+  },
+  
+  /**
+   * Get Intercom data from localStorage
+   */
+  getIntercomData: (): IntercomData | null => {
+    const data = localStorage.getItem('intercom_data');
+    if (!data) return null;
+    
+    try {
+      return JSON.parse(data) as IntercomData;
+    } catch (error) {
+      console.error('Error parsing Intercom data:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Remove Intercom data from localStorage
+   */
+  removeIntercomData: (): void => {
+    localStorage.removeItem('intercom_data');
   },
 };
 
